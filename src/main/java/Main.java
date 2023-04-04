@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -13,12 +14,15 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Properties;
-import org.apache.commons.io.FileUtils;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.message.BasicNameValuePair;
@@ -27,9 +31,10 @@ public class Main {
 
   private static final HttpClient CLIENT =
       HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30)).build();
-  private static final String ENVIRONMENT = "dev";
+  private static final String QUEUE_ENVIRONMENT = "dev"; //dev, stage, prod
+  private static final String URL_ENVIRONMENT = "dev"; //dev, test, np, prod
   private static final String BASE_URI =
-      "https://emx-route-manager-" + ENVIRONMENT + ".churchofjesuschrist.org/api/emx-router";
+      "https://emx-route-manager-" + URL_ENVIRONMENT + ".churchofjesuschrist.org/api/emx-router";
   private static final ObjectMapper MAPPER =
       JsonMapper.builder().addModule(new ParameterNamesModule()).build();
 
@@ -38,15 +43,32 @@ public class Main {
     properties.load(
         new FileReader(System.getProperty("user.home") + File.separator + ".cred.properties"));
     var authHeader =
-        properties.getProperty("emxaccount" + ENVIRONMENT + ".username")
+        properties.getProperty("emxaccount" + QUEUE_ENVIRONMENT + ".username")
             + ":"
-            + properties.getProperty("emxaccount" + ENVIRONMENT + ".password");
+            + properties.getProperty("emxaccount" + QUEUE_ENVIRONMENT + ".password");
 
     var routes = getRoutes(authHeader);
-    FileUtils.writeStringToFile(new File("src/main/resources/OriginalRoutes.json"), routes,
-        StandardCharsets.UTF_8);
+
+    var fileName = "OriginalRoutes" + LocalDateTime.now().format(
+        DateTimeFormatter.ISO_DATE_TIME) + ".json";
+
+    var path = Files.writeString(Path.of("./" + fileName), routes);
+
     var endpointRoutes = convertQueuesToEndpoints(routes);
-    for (var route : endpointRoutes) {
+    parameterizeUpdate(authHeader, endpointRoutes);
+    boolean revert = true;
+
+    // The fallback
+    if(revert) {
+      var backup = Files.readAllBytes(path);
+        var queueRoutes = convertEndpointsToQueues(backup);
+        parameterizeUpdate(authHeader, queueRoutes);
+
+    }
+  }
+
+  private static void parameterizeUpdate(String authHeader, List<Route> routes) {
+    for (var route : routes) {
       var parameters = addSharedParams(route);
       String body = createUrlEncodedBody(parameters);
       updateRoute(authHeader, body);
@@ -108,11 +130,11 @@ public class Main {
       List<String> endpoints = new ArrayList<>();
       for (var queue : route.queues()) {
         if ("emx-trash".equals(queue)) {
-          endpoints.add("emx-core-trash#" + ENVIRONMENT);
+          endpoints.add("emx-core-trash#" + QUEUE_ENVIRONMENT);
         } else if ("emx-to-archive-core".equals(queue)) {
-          endpoints.add("emx-core-archive#" + ENVIRONMENT);
+          endpoints.add("emx-core-archive#" + QUEUE_ENVIRONMENT);
         } else if ("emx-to-emx-healthcheck".equals(queue)) {
-          endpoints.add("emx-core-healthcheck#" + ENVIRONMENT);
+          endpoints.add("emx-core-healthcheck#" + QUEUE_ENVIRONMENT);
         } else if (queue.contains("#")) {
           endpoints.add(queue);
         } else {
@@ -138,6 +160,45 @@ public class Main {
               route.description(),
               route.enabled(),
               endpoints,
+              route.createdDate(),
+              route.modifiedDate());
+      updatedRoutes.add(updatedRoute);
+    }
+    return updatedRoutes;
+  }
+
+  static List<Route> convertEndpointsToQueues(byte[] input) throws IOException {
+    var routes = MAPPER.readValue(input, RoutesList.class);
+    List<Route> updatedRoutes = new ArrayList<>();
+    for (var route : routes.routes()) {
+      List<String> queues = new ArrayList<>();
+      for (var endpoint : route.queues()) {
+        if (("emx-core-trash#" + QUEUE_ENVIRONMENT).equals(endpoint)) {
+          queues.add("emx-trash");
+        } else if (("emx-core-archive#" + QUEUE_ENVIRONMENT).equals(endpoint)) {
+          queues.add("emx-to-archive-core");
+        } else if (("emx-core-healthcheck#" + QUEUE_ENVIRONMENT).equals(endpoint)) {
+          queues.add("emx-to-emx-healthcheck");
+        } else if(endpoint.contains("emx-to")){
+          queues.add(endpoint);
+        }else {
+          var pieces = endpoint.split("#");
+          String system = URLDecoder.decode(pieces[0], StandardCharsets.UTF_8);
+          String environment = URLDecoder.decode(pieces[1], StandardCharsets.UTF_8);
+          queues.add("emx-to-" + system + "-" + environment);
+        }
+      }
+      if (queues.isEmpty()) {
+        continue;
+      }
+      var updatedRoute =
+          new Route(
+              route.uuid(),
+              route.name(),
+              route.rule(),
+              route.description(),
+              route.enabled(),
+              queues,
               route.createdDate(),
               route.modifiedDate());
       updatedRoutes.add(updatedRoute);
