@@ -32,7 +32,7 @@ public class Main {
   private static final HttpClient CLIENT =
       HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30)).build();
   private static final String QUEUE_ENVIRONMENT = "dev"; //dev, stage, prod
-  private static final String URL_ENVIRONMENT = "dev"; //dev, test, np, prod
+  private static final String URL_ENVIRONMENT = "dev"; //dev, np, prod
   private static final String BASE_URI =
       "https://emx-route-manager-" + URL_ENVIRONMENT + ".churchofjesuschrist.org/api/emx-router";
   private static final ObjectMapper MAPPER =
@@ -47,24 +47,30 @@ public class Main {
             + ":"
             + properties.getProperty("emxaccount" + QUEUE_ENVIRONMENT + ".password");
 
+    runEndpointConversion(authHeader);
+
+    // The fallback
+    //revert(authHeader);
+
+  }
+
+  private static void revert(String authHeader) throws IOException {
+
+    var backup = Files.readAllBytes(Path.of("OriginalRoutes" + LocalDateTime.now().format(
+        DateTimeFormatter.ISO_LOCAL_DATE) + ".json"));
+    var queueRoutes = convertEndpointsToQueues(backup);
+    parameterizeUpdate(authHeader, queueRoutes);
+  }
+
+  private static void runEndpointConversion(String authHeader) throws IOException {
     var routes = getRoutes(authHeader);
 
     var fileName = "OriginalRoutes" + LocalDateTime.now().format(
-        DateTimeFormatter.ISO_DATE_TIME) + ".json";
-
-    var path = Files.writeString(Path.of("./" + fileName), routes);
+        DateTimeFormatter.ISO_LOCAL_DATE) + ".json";
+    Files.writeString(Path.of("./" + fileName), routes);
 
     var endpointRoutes = convertQueuesToEndpoints(routes);
     parameterizeUpdate(authHeader, endpointRoutes);
-    boolean revert = true;
-
-    // The fallback
-    if(revert) {
-      var backup = Files.readAllBytes(path);
-        var queueRoutes = convertEndpointsToQueues(backup);
-        parameterizeUpdate(authHeader, queueRoutes);
-
-    }
   }
 
   private static void parameterizeUpdate(String authHeader, List<Route> routes) {
@@ -179,9 +185,9 @@ public class Main {
           queues.add("emx-to-archive-core");
         } else if (("emx-core-healthcheck#" + QUEUE_ENVIRONMENT).equals(endpoint)) {
           queues.add("emx-to-emx-healthcheck");
-        } else if(endpoint.contains("emx-to")){
+        } else if (endpoint.contains("emx-to")) {
           queues.add(endpoint);
-        }else {
+        } else {
           var pieces = endpoint.split("#");
           String system = URLDecoder.decode(pieces[0], StandardCharsets.UTF_8);
           String environment = URLDecoder.decode(pieces[1], StandardCharsets.UTF_8);

@@ -16,7 +16,7 @@ any changes to that route.
 
 ## Rollback strategy(endpoints to emx-to queues)
 * You will need to select the same lane in which you ran the code initially.
-* There is a boolean to indicate whether you want to roll back the routes or not. 
-Set this to true.
+* Comment out the running of the conversion. Uncomment the revert method. Run 
+the code.
 * Check Voyager to make sure that endpoints got converted back to emx-to queues 
 correctly.
