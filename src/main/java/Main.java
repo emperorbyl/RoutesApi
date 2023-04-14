@@ -56,18 +56,18 @@ public class Main {
 
   private static void revert(String authHeader) throws IOException {
 
-    var backup = Files.readAllBytes(Path.of("OriginalRoutes" + LocalDateTime.now().format(
-        DateTimeFormatter.ISO_LOCAL_DATE) + ".json"));
-    var queueRoutes = convertEndpointsToQueues(backup);
-    parameterizeUpdate(authHeader, queueRoutes);
+    try (var localFiles = Files.list(Path.of("./"))) {
+      var backup = Files.readAllBytes(localFiles.findAny().orElseThrow());
+      var queueRoutes = convertEndpointsToQueues(backup);
+      parameterizeUpdate(authHeader, queueRoutes);
+    }
   }
 
   private static void runEndpointConversion(String authHeader) throws IOException {
     var routes = getRoutes(authHeader);
 
-    var fileName = "OriginalRoutes" + LocalDateTime.now().format(
-        DateTimeFormatter.ISO_LOCAL_DATE) + ".json";
-    Files.writeString(Path.of("./" + fileName), routes);
+    Files.writeString(Path.of("./OriginalRoutes" + LocalDateTime.now().format(
+        DateTimeFormatter.ISO_LOCAL_DATE_TIME) + ".json"), routes);
 
     var endpointRoutes = convertQueuesToEndpoints(routes);
     parameterizeUpdate(authHeader, endpointRoutes);
@@ -185,7 +185,7 @@ public class Main {
           queues.add("emx-to-archive-core");
         } else if (("emx-core-healthcheck#" + QUEUE_ENVIRONMENT).equals(endpoint)) {
           queues.add("emx-to-emx-healthcheck");
-        } else if (endpoint.contains("emx-to")) {
+        } else if (endpoint.contains("emx-to") || "emx-trash".equals(endpoint)) {
           queues.add(endpoint);
         } else {
           var pieces = endpoint.split("#");
