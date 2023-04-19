@@ -20,7 +20,8 @@ queues are now endpoints.
 ## Rollback strategy(endpoints to emx-to queues)
 * You will need to select the same lane in which you ran the code initially. For stage, this would
 be np for the router api and stage for the queues. For prod, both are prod.
-* Comment out the runEndpointConversion method. Uncomment the revert method. Run 
-the code.
+* Comment out the runEndpointConversion method. Uncomment the revert method.
+* Specify the file that you want the revert to use.
+* Run the code.
 * Check Voyager to make sure that endpoints got converted back to emx-to queues 
 correctly.

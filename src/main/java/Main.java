@@ -50,17 +50,14 @@ public class Main {
     runEndpointConversion(authHeader);
 
     // The fallback
-    //revert(authHeader);
+    //revert(authHeader, "./OriginalRoutes2023-04-19T11:26:01.1516.json");
 
   }
 
-  private static void revert(String authHeader) throws IOException {
-
-    try (var localFiles = Files.list(Path.of("./"))) {
-      var backup = Files.readAllBytes(localFiles.findAny().orElseThrow());
-      var queueRoutes = convertEndpointsToQueues(backup);
-      parameterizeUpdate(authHeader, queueRoutes);
-    }
+  private static void revert(String authHeader, String fileName) throws IOException {
+    byte[] backup = Files.readAllBytes(Path.of(fileName));
+    var queueRoutes = convertEndpointsToQueues(backup);
+    parameterizeUpdate(authHeader, queueRoutes);
   }
 
   private static void runEndpointConversion(String authHeader) throws IOException {
