@@ -51,7 +51,7 @@ public class Main {
         runEndpointConversion(authHeader);
 
         // The fallback
-        //revert(authHeader, "./OriginalRoutes2023-04-25T11:03:26.946763.json");
+        //revert(authHeader, "./OriginalRoutes2024-02-16T14:05:23.370439.json");
 
     }
 
@@ -69,7 +69,7 @@ public class Main {
                 DateTimeFormatter.ISO_LOCAL_DATE_TIME) + ".json"), routes);
 
         //var endpointRoutes = convertQueuesToEndpoints(routes);
-        var endpointRoutes = convertRuleToEndpointParts(routes);
+        var endpointRoutes = convertEndpointPattern(routes);
         parameterizeUpdate(authHeader, endpointRoutes);
     }
 
@@ -130,7 +130,7 @@ public class Main {
     }
 
     static List<Route> convertQueuesToEndpoints(String body) throws JsonProcessingException {
-        var routes = MAPPER.readValue(body, RoutesList.class);
+        var routes = marshalRoutes(body);
         List<Route> updatedRoutes = new ArrayList<>();
         for (var route : routes.routes()) {
             List<String> endpoints = new ArrayList<>();
@@ -175,7 +175,7 @@ public class Main {
     }
 
     static List<Route> convertEndpointsToQueues(byte[] input) throws IOException {
-        var routes = MAPPER.readValue(input, RoutesList.class);
+        var routes = marshalRoutes(input);
         List<Route> updatedRoutes = new ArrayList<>();
         for (var route : routes.routes()) {
             List<String> queues = new ArrayList<>();
@@ -214,7 +214,7 @@ public class Main {
     }
 
     static List<Route> convertRuleToEndpointParts(String body) throws JsonProcessingException {
-        var routes = MAPPER.readValue(body, RoutesList.class);
+        var routes = marshalRoutes(body);
         List<Route> updatedRoutes = new ArrayList<>();
         for (var route : routes.routes()) {
             var rule = route.rule().replace("emxSourceSystem", "endpoint.system").replace("emxSourceEnvironment", "endpoint.env");
@@ -233,7 +233,7 @@ public class Main {
     }
 
     static List<Route> convertRuleToHeaders(byte[] input) throws IOException {
-        var routes = MAPPER.readValue(input, RoutesList.class);
+        var routes = marshalRoutes(input);
         List<Route> updatedRoutes = new ArrayList<>();
         for (var route : routes.routes()) {
             var rule = route.rule().replace("endpoint.system", "emxSourceSystem").replace("endpoint.env", "emxSourceEnvironment");
@@ -249,6 +249,36 @@ public class Main {
                             route.modifiedDate()
                     )
             );
+        }
+        return updatedRoutes;
+    }
+
+    static List<Route> convertEndpointPattern(String body) throws JsonProcessingException {
+        var routes = marshalRoutes(body);
+        List<Route> updatedRoutes = new ArrayList<>();
+        for (var route : routes.routes()) {
+            var rule = route.rule();
+            if (rule.contains("endpoint==") && rule.contains("/") && !rule.contains("||")) {
+                String endpoint = rule.substring(rule.indexOf("\"") + 1, rule.lastIndexOf("\""));
+                var endpointParts = endpoint.split("/");
+                var systemEnv = endpointParts[0].split("#");
+                StringBuilder endpointPattern = new StringBuilder();
+                endpointPattern.append("endpoint==\"");
+                endpointPattern.append(systemEnv[0]).append("/").append(endpointParts[1]).append("#").append(systemEnv[1]);
+                endpointPattern.append("\"").append(" || endpoint==\"");
+                endpointPattern.append(systemEnv[0]).append("#").append(systemEnv[1]).append("/").append(endpointParts[1]);
+                endpointPattern.append("\"");
+                updatedRoutes.add(new Route(route.uuid(),
+                        route.name(),
+                        endpointPattern.toString(),
+                        route.description(),
+                        route.enabled(),
+                        route.queues(),
+                        route.createdDate(),
+                        route.modifiedDate()));
+            } else {
+                updatedRoutes.add(route);
+            }
         }
         return updatedRoutes;
     }
@@ -279,5 +309,13 @@ public class Main {
         params.add(new BasicNameValuePair("enabled", Boolean.toString(route.enabled())));
         params.add(new BasicNameValuePair("uuid", route.uuid()));
         return params;
+    }
+
+    static RoutesList marshalRoutes(String body) throws JsonProcessingException {
+        return MAPPER.readValue(body, RoutesList.class);
+    }
+
+    static RoutesList marshalRoutes(byte[] body) throws IOException {
+        return MAPPER.readValue(body, RoutesList.class);
     }
 }
