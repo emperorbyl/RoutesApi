@@ -191,17 +191,43 @@ public class MainTests {
                       "queues": ["scms#stage"],
                       "createdDate": "2023-03-28",
                       "modifiedDate": "2023-03-28"
+                    },
+                    {
+                      "uuid": "32354541",
+                      "name": "Perrin",
+                      "rule": "endpoint==\\"cmiss#stage/raw\\" && (objectType==\\"bob\\"||objectType==\\"fred\\")",
+                      "description": "",
+                      "enabled": true,
+                      "queues": ["scms#stage"],
+                      "createdDate": "2023-03-28",
+                      "modifiedDate": "2023-03-28"
+                    },
+                    {
+                      "uuid": "32354541",
+                      "name": "Mat",
+                      "rule": "endpoint==\\"ews-payment#test\\" && s3.object.path==\\"joe/bob\\"",
+                      "description": "",
+                      "enabled": true,
+                      "queues": ["scms#stage"],
+                      "createdDate": "2023-03-28",
+                      "modifiedDate": "2023-03-28"
                     }
                   ]
                 }
                 """;
         var routes = Main.convertEndpointPattern(body);
-        assertThat(routes).hasSize(2);
+        assertThat(routes).hasSize(4);
         var elendRoute = routes.get(0);
         assertThat(elendRoute.rule()).isEqualTo("emxSourceSystem==\"cars\" && emxSourceEnvironment==\"stage\" && emxDatatype==\"vendor\"");
 
         var randRoute = routes.get(1);
-        assertThat(randRoute.rule()).isEqualTo("endpoint==\"cars/vendor#stage\" || endpoint==\"cars#stage/vendor\"");
+        assertThat(randRoute.rule()).isEqualTo("(endpoint==\"cars/vendor#stage\" || endpoint==\"cars#stage/vendor\")");
+
+        var perrinRoute = routes.get(2);
+        assertThat(perrinRoute.rule()).isEqualTo("(endpoint==\"cmis/raw#stage\" || endpoint==\"cmiss#stage/raw\") && (objectType==\"bob\"||objectType==\"fred\")");
+
+        var matRoute = routes.get(3);
+        assertThat(matRoute.rule()).isEqualTo("endpoint==\"ews-payment#test\" && s3.object.path==\"joe/bob\"");
     }
 
 }
