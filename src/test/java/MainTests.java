@@ -211,12 +211,22 @@ public class MainTests {
                       "queues": ["scms#stage"],
                       "createdDate": "2023-03-28",
                       "modifiedDate": "2023-03-28"
+                    },
+                    {
+                      "uuid": "32354541",
+                      "name": "Egwene",
+                      "rule": "(objectType==\\"Person\\" || objectType==\\"Unit\\") && endpoint==\\"cmiss#prod/raw\\"",
+                      "description": "",
+                      "enabled": true,
+                      "queues": ["scms#stage"],
+                      "createdDate": "2023-03-28",
+                      "modifiedDate": "2023-03-28"
                     }
                   ]
                 }
                 """;
         var routes = Main.convertEndpointPattern(body);
-        assertThat(routes).hasSize(4);
+        assertThat(routes).hasSize(5);
         var elendRoute = routes.get(0);
         assertThat(elendRoute.rule()).isEqualTo("emxSourceSystem==\"cars\" && emxSourceEnvironment==\"stage\" && emxDatatype==\"vendor\"");
 
@@ -224,10 +234,13 @@ public class MainTests {
         assertThat(randRoute.rule()).isEqualTo("(endpoint==\"cars/vendor#stage\" || endpoint==\"cars#stage/vendor\")");
 
         var perrinRoute = routes.get(2);
-        assertThat(perrinRoute.rule()).isEqualTo("(endpoint==\"cmis/raw#stage\" || endpoint==\"cmiss#stage/raw\") && (objectType==\"bob\"||objectType==\"fred\")");
+        assertThat(perrinRoute.rule()).isEqualTo("(endpoint==\"cmiss/raw#stage\" || endpoint==\"cmiss#stage/raw\") && (objectType==\"bob\"||objectType==\"fred\")");
 
         var matRoute = routes.get(3);
         assertThat(matRoute.rule()).isEqualTo("endpoint==\"ews-payment#test\" && s3.object.path==\"joe/bob\"");
+
+        var egweneRoute = routes.get(4);
+        assertThat(egweneRoute.rule()).isEqualTo("(objectType==\"Person\" || objectType==\"Unit\") && (endpoint==\"cmiss/raw#prod\" || endpoint==\"cmiss#prod/raw\")");
     }
 
 }

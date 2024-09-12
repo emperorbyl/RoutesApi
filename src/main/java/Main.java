@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Properties;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Main {
@@ -258,13 +257,14 @@ public class Main {
     static List<Route> convertEndpointPattern(String body) throws JsonProcessingException {
         var routes = marshalRoutes(body);
         List<Route> updatedRoutes = new ArrayList<>();
+        var pattern = Pattern.compile(".*endpoint==\"(.+?)\".*");
         for (var route : routes.routes()) {
             var rule = route.rule();
-            var pattern = Pattern.compile("endpoint==\"(.+?)\"");
+
             var matcher = pattern.matcher(rule);
             if (matcher.matches()) {
                 var group = matcher.group(1);
-                if(group.contains("/")) {
+                if (group.contains("/")) {
                     var endpoint = group.split("/");
                     var systemEnv = endpoint[0].split("#");
                     var qualifier = endpoint[1];
@@ -278,12 +278,14 @@ public class Main {
                     endpointPattern.append("\")");
                     updatedRoutes.add(new Route(route.uuid(),
                             route.name(),
-                            endpointPattern.toString(),
+                            route.rule().replace("endpoint==\"" + group + "\"", endpointPattern.toString()),
                             route.description(),
                             route.enabled(),
                             route.queues(),
                             route.createdDate(),
                             route.modifiedDate()));
+                } else {
+                    updatedRoutes.add(route);
                 }
             } else {
                 updatedRoutes.add(route);
