@@ -257,7 +257,7 @@ public class Main {
     static List<Route> convertEndpointPattern(String body) throws JsonProcessingException {
         var routes = marshalRoutes(body);
         List<Route> updatedRoutes = new ArrayList<>();
-        var pattern = Pattern.compile(".*endpoint==\"(.+?)\".*");
+        var pattern = Pattern.compile(".*endpoint==\"(.+?)\".*", Pattern.DOTALL);
         for (var route : routes.routes()) {
             var rule = route.rule();
 

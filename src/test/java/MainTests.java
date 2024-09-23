@@ -195,7 +195,7 @@ public class MainTests {
                     {
                       "uuid": "32354541",
                       "name": "Perrin",
-                      "rule": "endpoint==\\"cmiss#stage/raw\\" && (objectType==\\"bob\\"||objectType==\\"fred\\")",
+                      "rule": "endpoint==\\"cmiss#stage/delta\\" && \\n(objectType==\\"lds.notification.unit.UnitStatusChange\\" \\n || objectType==\\"lds.notification.unit.UnitChange\\" \\n || objectType==\\"lds.notification.unit.UnitAssociationStatusChange\\")",
                       "description": "",
                       "enabled": true,
                       "queues": ["scms#stage"],
@@ -234,7 +234,7 @@ public class MainTests {
         assertThat(randRoute.rule()).isEqualTo("(endpoint==\"cars/vendor#stage\" || endpoint==\"cars#stage/vendor\")");
 
         var perrinRoute = routes.get(2);
-        assertThat(perrinRoute.rule()).isEqualTo("(endpoint==\"cmiss/raw#stage\" || endpoint==\"cmiss#stage/raw\") && (objectType==\"bob\"||objectType==\"fred\")");
+        assertThat(perrinRoute.rule()).isEqualTo("(endpoint==\"cmiss/delta#stage\" || endpoint==\"cmiss#stage/delta\") && \n(objectType==\"lds.notification.unit.UnitStatusChange\" \n || objectType==\"lds.notification.unit.UnitChange\" \n || objectType==\"lds.notification.unit.UnitAssociationStatusChange\")");
 
         var matRoute = routes.get(3);
         assertThat(matRoute.rule()).isEqualTo("endpoint==\"ews-payment#test\" && s3.object.path==\"joe/bob\"");
