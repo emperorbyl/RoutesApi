@@ -221,12 +221,22 @@ public class MainTests {
                       "queues": ["scms#stage"],
                       "createdDate": "2023-03-28",
                       "modifiedDate": "2023-03-28"
+                    },
+                    {
+                      "uuid": "32354541",
+                      "name": "Vin",
+                      "rule": "(endpoint==\\"cars/vendor#stage\\" || endpoint==\\"cars#stage/vendor\\")",
+                      "description": "",
+                      "enabled": true,
+                      "queues": ["scms#stage"],
+                      "createdDate": "2023-03-28",
+                      "modifiedDate": "2023-03-28"
                     }
                   ]
                 }
                 """;
         var routes = Main.convertEndpointPattern(body);
-        assertThat(routes).hasSize(5);
+        assertThat(routes).hasSize(6);
         var elendRoute = routes.get(0);
         assertThat(elendRoute.rule()).isEqualTo("emxSourceSystem==\"cars\" && emxSourceEnvironment==\"stage\" && emxDatatype==\"vendor\"");
 
@@ -241,6 +251,9 @@ public class MainTests {
 
         var egweneRoute = routes.get(4);
         assertThat(egweneRoute.rule()).isEqualTo("(objectType==\"Person\" || objectType==\"Unit\") && (endpoint==\"cmiss/raw#prod\" || endpoint==\"cmiss#prod/raw\")");
+
+        var vinRoute = routes.get(5);
+        assertThat(vinRoute.rule()).isEqualTo("(endpoint==\"cars/vendor#stage\" || endpoint==\"cars#stage/vendor\")");
     }
 
 }
