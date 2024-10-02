@@ -69,8 +69,7 @@ public class Main {
         Files.writeString(Path.of("./OriginalRoutes" + LocalDateTime.now().format(
                 DateTimeFormatter.ISO_LOCAL_DATE_TIME) + ".json"), routes);
 
-        //var endpointRoutes = convertQueuesToEndpoints(routes);
-        var endpointRoutes = convertEndpointPattern(routes);
+        var endpointRoutes = cleanupEndpointPattern(routes);
         parameterizeUpdate(authHeader, endpointRoutes);
     }
 
@@ -291,6 +290,37 @@ public class Main {
                     updatedRoutes.add(route);
                 }
             } else {
+                updatedRoutes.add(route);
+            }
+        }
+        return updatedRoutes;
+    }
+
+    static List<Route> cleanupEndpointPattern(String body) throws JsonProcessingException {
+        var routes = marshalRoutes(body);
+        List<Route> updatedRoutes = new ArrayList<>();
+        var backwardsCompatiblePattern = Pattern.compile(".*(\\(endpoint==.+?\\)).*", Pattern.DOTALL);
+        var qualifierFocusPattern = Pattern.compile(".*(endpoint==\".+/.+#.+\")\\s\\|\\|.+");
+        for (var route : routes.routes()) {
+            var rule = route.rule();
+            var matcher = backwardsCompatiblePattern.matcher(rule);
+            if(matcher.matches()){
+                var backwardsCompatible = matcher.group(1);
+                var qualiferMatcher = qualifierFocusPattern.matcher(backwardsCompatible);
+                if(qualiferMatcher.matches()) {
+                    var qualifierFocus = qualiferMatcher.group(1);
+                    updatedRoutes.add(new Route(route.uuid(),
+                            route.name(),
+                            route.rule().replace(backwardsCompatible, qualifierFocus),
+                            route.description(),
+                            route.enabled(),
+                            route.queues(),
+                            route.createdDate(),
+                            route.modifiedDate()));
+                } else{
+                    updatedRoutes.add(route);
+                }
+            } else{
                 updatedRoutes.add(route);
             }
         }

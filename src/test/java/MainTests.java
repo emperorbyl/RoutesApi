@@ -256,4 +256,93 @@ public class MainTests {
         assertThat(vinRoute.rule()).isEqualTo("(endpoint==\"cars/vendor#stage\" || endpoint==\"cars#stage/vendor\")");
     }
 
+    @Test
+    public void cleanupEndpointPattern() throws JsonProcessingException {
+        String body = """
+                {
+                  "routesList":[
+                    {
+                      "uuid": "32354541274",
+                      "name": "Elend",
+                      "rule": "emxSourceSystem==\\"cars\\" && emxSourceEnvironment==\\"stage\\" && emxDatatype==\\"vendor\\"",
+                      "description": "",
+                      "enabled": true,
+                      "queues": ["scms#stage", "emx-core-trash#dev"],
+                      "createdDate": "2023-03-28",
+                      "modifiedDate": "2023-03-28"
+                    },
+                    {
+                      "uuid": "32354541",
+                      "name": "Rand",
+                      "rule": "(endpoint==\\"cars/vendor#stage\\" || endpoint==\\"cars#stage/vendor\\")",
+                      "description": "",
+                      "enabled": true,
+                      "queues": ["scms#stage"],
+                      "createdDate": "2023-03-28",
+                      "modifiedDate": "2023-03-28"
+                    },
+                    {
+                      "uuid": "32354541",
+                      "name": "Perrin",
+                      "rule": "(endpoint==\\"cmiss/delta#stage\\" || endpoint==\\"cmiss#stage/delta\\") && \\n(objectType==\\"lds.notification.unit.UnitStatusChange\\" \\n || objectType==\\"lds.notification.unit.UnitChange\\" \\n || objectType==\\"lds.notification.unit.UnitAssociationStatusChange\\")",
+                      "description": "",
+                      "enabled": true,
+                      "queues": ["scms#stage"],
+                      "createdDate": "2023-03-28",
+                      "modifiedDate": "2023-03-28"
+                    },
+                    {
+                      "uuid": "32354541",
+                      "name": "Mat",
+                      "rule": "endpoint==\\"ews-payment#test\\" && s3.object.path==\\"joe/bob\\"",
+                      "description": "",
+                      "enabled": true,
+                      "queues": ["scms#stage"],
+                      "createdDate": "2023-03-28",
+                      "modifiedDate": "2023-03-28"
+                    },
+                    {
+                      "uuid": "32354541",
+                      "name": "Egwene",
+                      "rule": "(objectType==\\"Person\\" || objectType==\\"Unit\\") && (endpoint==\\"cmiss/raw#prod\\" || endpoint==\\"cmiss#prod/raw\\")",
+                      "description": "",
+                      "enabled": true,
+                      "queues": ["scms#stage"],
+                      "createdDate": "2023-03-28",
+                      "modifiedDate": "2023-03-28"
+                    },
+                    {
+                      "uuid": "32354541",
+                      "name": "Vin",
+                      "rule": "endpoint==\\"cars/vendor#stage\\"",
+                      "description": "",
+                      "enabled": true,
+                      "queues": ["scms#stage"],
+                      "createdDate": "2023-03-28",
+                      "modifiedDate": "2023-03-28"
+                    }
+                  ]
+                }
+                """;
+        var routes = Main.cleanupEndpointPattern(body);
+        assertThat(routes).hasSize(6);
+        var elendRoute = routes.get(0);
+        assertThat(elendRoute.rule()).isEqualTo("emxSourceSystem==\"cars\" && emxSourceEnvironment==\"stage\" && emxDatatype==\"vendor\"");
+
+        var randRoute = routes.get(1);
+        assertThat(randRoute.rule()).isEqualTo("endpoint==\"cars/vendor#stage\"");
+
+        var perrinRoute = routes.get(2);
+        assertThat(perrinRoute.rule()).isEqualTo("endpoint==\"cmiss/delta#stage\" && \n(objectType==\"lds.notification.unit.UnitStatusChange\" \n || objectType==\"lds.notification.unit.UnitChange\" \n || objectType==\"lds.notification.unit.UnitAssociationStatusChange\")");
+
+        var matRoute = routes.get(3);
+        assertThat(matRoute.rule()).isEqualTo("endpoint==\"ews-payment#test\" && s3.object.path==\"joe/bob\"");
+
+        var egweneRoute = routes.get(4);
+        assertThat(egweneRoute.rule()).isEqualTo("(objectType==\"Person\" || objectType==\"Unit\") && endpoint==\"cmiss/raw#prod\"");
+
+        var vinRoute = routes.get(5);
+        assertThat(vinRoute.rule()).isEqualTo("endpoint==\"cars/vendor#stage\"");
+    }
+
 }
