@@ -345,4 +345,55 @@ public class MainTests {
         assertThat(vinRoute.rule()).isEqualTo("endpoint==\"cars/vendor#stage\"");
     }
 
+    @Test
+    public void switchTargetToQualifierPattern() throws JsonProcessingException {
+        String body = """
+                {
+                  "routesList":[
+                    {
+                      "uuid": "32354541274",
+                      "name": "Elend",
+                      "rule": "emxSourceSystem==\\"cars\\" && emxSourceEnvironment==\\"stage\\" && emxDatatype==\\"vendor\\"",
+                      "description": "",
+                      "enabled": true,
+                      "queues": ["scms#stage", "emx-core-trash#dev"],
+                      "createdDate": "2023-03-28",
+                      "modifiedDate": "2023-03-28"
+                    },
+                    {
+                      "uuid": "32354541",
+                      "name": "Rand",
+                      "rule": "endpoint==\\"cars#stage/vendor\\"",
+                      "description": "",
+                      "enabled": true,
+                      "queues": ["scms#stage", "crm-aveng#stage/cmiss"],
+                      "createdDate": "2023-03-28",
+                      "modifiedDate": "2023-03-28"
+                    },
+                    {
+                      "uuid": "32354541",
+                      "name": "Thom",
+                      "rule": "endpoint==\\"cars#stage/vendor\\"",
+                      "description": "",
+                      "enabled": true,
+                      "queues": ["crm-aveng#stage/cmiss", "crm-central-america/cmiss#stage"],
+                      "createdDate": "2023-03-28",
+                      "modifiedDate": "2023-03-28"
+                    }
+                  ]
+                }
+                """;
+        var routes = Main.switchTargetsToQualifierPattern(body);
+        assertThat(routes).hasSize(3);
+
+        var elendRoute = routes.get(0);
+        assertThat(elendRoute.queues()).hasSize(2).contains("scms#stage", "emx-core-trash#dev");
+
+        var randRoute = routes.get(1);
+        assertThat(randRoute.queues()).hasSize(2).contains("scms#stage", "crm-aveng/cmiss#stage");
+
+        var thomRoute = routes.get(2);
+        assertThat(thomRoute.queues()).hasSize(2).contains("crm-aveng/cmiss#stage", "crm-central-america/cmiss#stage");
+    }
+
 }

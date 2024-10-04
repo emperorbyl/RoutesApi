@@ -69,7 +69,7 @@ public class Main {
         Files.writeString(Path.of("./OriginalRoutes" + LocalDateTime.now().format(
                 DateTimeFormatter.ISO_LOCAL_DATE_TIME) + ".json"), routes);
 
-        var endpointRoutes = cleanupEndpointPattern(routes);
+        var endpointRoutes = switchTargetsToQualifierPattern(routes);
         parameterizeUpdate(authHeader, endpointRoutes);
     }
 
@@ -323,6 +323,39 @@ public class Main {
             } else{
                 updatedRoutes.add(route);
             }
+        }
+        return updatedRoutes;
+    }
+
+    static List<Route> switchTargetsToQualifierPattern(String body) throws JsonProcessingException {
+        var routes = marshalRoutes(body);
+        List<Route> updatedRoutes = new ArrayList<>();
+        var qualifierEndpoint = Pattern.compile("(.+)#(.+)/(.+)");
+        for (var route : routes.routes()) {
+            var queues = route.queues();
+            List<String> updatedQueues = new ArrayList<>();
+            for (var queue : queues) {
+                var matcher = qualifierEndpoint.matcher(queue);
+                if(matcher.matches()){
+                   var endpoint = new StringBuilder();
+                   endpoint.append(matcher.group(1))
+                           .append("/")
+                           .append(matcher.group(3))
+                           .append("#")
+                           .append(matcher.group(2));
+                   updatedQueues.add(endpoint.toString());
+                } else{
+                    updatedQueues.add(queue);
+                }
+            }
+            updatedRoutes.add(new Route(route.uuid(),
+                    route.name(),
+                    route.rule(),
+                    route.description(),
+                    route.enabled(),
+                    updatedQueues,
+                    route.createdDate(),
+                    route.modifiedDate()));
         }
         return updatedRoutes;
     }
